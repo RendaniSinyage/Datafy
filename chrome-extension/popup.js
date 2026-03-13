@@ -1,3 +1,60 @@
+function sanitizeHTML(html) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const allowedTags = [
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr',
+        'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+        'strong', 'em', 'b', 'i', 'u', 's', 'del', 'ins',
+        'code', 'pre', 'blockquote',
+        'a', 'img', 'span', 'div',
+        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td'
+    ];
+    const allowedAttrs = {
+        'a': ['href', 'title', 'target'],
+        'img': ['src', 'alt', 'title', 'width', 'height'],
+        'th': ['style'],
+        'td': ['style'],
+        'div': ['class'],
+        'span': ['class']
+    };
+
+    const elements = doc.body.querySelectorAll('*');
+    elements.forEach(el => {
+        const tagName = el.tagName.toLowerCase();
+        if (!allowedTags.includes(tagName)) {
+            el.remove();
+            return;
+        }
+
+        const attrs = el.attributes;
+        for (let i = attrs.length - 1; i >= 0; i--) {
+            const attrName = attrs[i].name.toLowerCase();
+            const allowed = allowedAttrs[tagName] || [];
+
+            if (!allowed.includes(attrName)) {
+                el.removeAttribute(attrs[i].name);
+                continue;
+            }
+
+            // Specific validation for URLs
+            if (attrName === 'href' || attrName === 'src') {
+                const value = attrs[i].value.replace(/\s/g, '').toLowerCase();
+                if (value.startsWith('javascript:') || value.startsWith('data:')) {
+                    el.removeAttribute(attrs[i].name);
+                }
+            }
+
+            // Limit styles to text-align (used by showdown tables)
+            if (attrName === 'style') {
+                if (!attrs[i].value.toLowerCase().match(/^text-align\s*:\s*(left|right|center)\s*;?$/)) {
+                    el.removeAttribute(attrs[i].name);
+                }
+            }
+        }
+    });
+    return doc.body.innerHTML;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- Element Cache ---
     const elements = {
@@ -486,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const converter = new showdown.Converter();
             const html = converter.makeHtml(text);
-            container.innerHTML = html;
+            container.innerHTML = sanitizeHTML(html);
 
             creditsTab.appendChild(container);
 
