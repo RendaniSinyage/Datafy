@@ -46,6 +46,27 @@ async function saveData() {
     }
 }
 
+// --- Sync with Orbit ---
+async function syncWithOrbit() {
+    try {
+        const { lastResetDate, settings } = await chrome.storage.local.get(['lastResetDate', 'settings']);
+        const payload = {
+            lastResetDate: lastResetDate || new Date().toISOString(),
+            settings: settings || {},
+            dataUsage: dataUsage,
+            timestamp: new Date().toISOString()
+        };
+        await fetch('http://127.0.0.1:49998/api/report', {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+    } catch (e) {
+        // Orbit server is offline or not running
+    }
+}
+
 // --- Hashing for Rule IDs ---
 function simpleHash(str) {
     let hash = 0;
@@ -336,6 +357,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     await dataLoadedPromise;
     if (alarm.name === 'dataSaver') {
         saveData();
+        syncWithOrbit();
     } else if (alarm.name === 'dailyResetChecker') {
         const { settings, lastResetDate } = await chrome.storage.local.get(['settings', 'lastResetDate']);
         if (!settings || !settings.resetDay) return;
