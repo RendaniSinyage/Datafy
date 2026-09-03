@@ -56,6 +56,12 @@ function sanitizeHTML(html) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Constants ---
+    const ARROW_UP_SRC = 'arrow-up.svg';
+    const ARROW_DOWN_SRC = 'arrow-down.svg';
+    const COLOR_RED = '#e74c3c';
+    const COLOR_GREEN = '#2ecc71';
+
     // --- Element Cache ---
     const elements = {
         sitesContainer: document.getElementById('sites-container'),
@@ -421,13 +427,13 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.lastMonthComparison.innerHTML = '';
 
             if (percentageChange > 0.1) {
-                elements.lastMonthComparison.innerHTML = `<img src="arrow-up.svg" class="arrow-icon active-red"> <img src="arrow-down.svg" class="arrow-icon inactive">`;
-                comparisonSpan.style.color = '#e74c3c';
+                elements.lastMonthComparison.innerHTML = `<img src="${ARROW_UP_SRC}" class="arrow-icon active-red"> <img src="${ARROW_DOWN_SRC}" class="arrow-icon inactive">`;
+                comparisonSpan.style.color = COLOR_RED;
             } else if (percentageChange < -0.1) {
-                elements.lastMonthComparison.innerHTML = `<img src="arrow-up.svg" class="arrow-icon inactive"> <img src="arrow-down.svg" class="arrow-icon active-green">`;
-                comparisonSpan.style.color = '#2ecc71';
+                elements.lastMonthComparison.innerHTML = `<img src="${ARROW_UP_SRC}" class="arrow-icon inactive"> <img src="${ARROW_DOWN_SRC}" class="arrow-icon active-green">`;
+                comparisonSpan.style.color = COLOR_GREEN;
             } else {
-                elements.lastMonthComparison.innerHTML = `<img src="arrow-up.svg" class="arrow-icon inactive"> <img src="arrow-down.svg" class="arrow-icon inactive">`;
+                elements.lastMonthComparison.innerHTML = `<img src="${ARROW_UP_SRC}" class="arrow-icon inactive"> <img src="${ARROW_DOWN_SRC}" class="arrow-icon inactive">`;
             }
             elements.lastMonthComparison.appendChild(comparisonSpan);
         } else {
