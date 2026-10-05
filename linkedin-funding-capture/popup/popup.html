@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkedIn Funding Capture</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-title-area">
+        <h1>LinkedIn Funding Capture</h1>
+        <span class="count-badge" id="opp-count">0 saved</span>
+      </div>
+      <div class="header-actions">
+        <button id="settings-toggle-btn" class="icon-btn" title="Settings">⚙️</button>
+      </div>
+    </header>
+
+    <!-- Settings Panel (Collapsible) -->
+    <div id="settings-panel" class="settings-panel hidden">
+      <div class="setting-item">
+        <label for="threshold-input">Capture Threshold (Min Score):</label>
+        <div class="input-with-val">
+          <input type="range" id="threshold-input" min="1" max="15" value="5">
+          <span id="threshold-value">5</span>
+        </div>
+      </div>
+      <div class="setting-item">
+        <label for="autocapture-toggle">Automatic Capture:</label>
+        <input type="checkbox" id="autocapture-toggle" checked>
+      </div>
+    </div>
+
+    <!-- Toolbar: Search & Export -->
+    <div class="toolbar">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="Search organization, author, text, title...">
+      </div>
+      <div class="export-buttons">
+        <button id="export-json-btn" class="btn btn-secondary" title="Export as JSON">Export JSON</button>
+        <button id="export-csv-btn" class="btn btn-secondary" title="Export as CSV">Export CSV</button>
+        <button id="clear-all-btn" class="btn btn-danger" title="Clear all saved opportunities">Clear</button>
+      </div>
+    </div>
+
+    <!-- Filter & Sort Bar -->
+    <div class="filter-bar">
+      <div class="filter-tabs" id="type-filter-tabs">
+        <button class="filter-tab active" data-type="ALL">All</button>
+        <button class="filter-tab" data-type="Grant">Grants</button>
+        <button class="filter-tab" data-type="Accelerator">Accelerators</button>
+        <button class="filter-tab" data-type="Investment">Investment</button>
+        <button class="filter-tab" data-type="Competition">Competitions</button>
+        <button class="filter-tab" data-type="Government Funding">Government</button>
+        <button class="filter-tab" data-type="Other">Other</button>
+      </div>
+      <div class="sort-selector">
+        <label for="sort-select">Sort:</label>
+        <select id="sort-select">
+          <option value="date-desc">Newest First</option>
+          <option value="date-asc">Oldest First</option>
+          <option value="deadline-asc">Deadline (Earliest)</option>
+          <option value="score-desc">Highest Score</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Content Area / List -->
+    <main class="opportunities-list" id="opportunities-list">
+      <div class="empty-state">
+        <p>No funding opportunities captured yet.</p>
+        <small>Browse LinkedIn to automatically collect opportunities.</small>
+      </div>
+    </main>
+
+    <!-- Screenshot Modal Lightbox -->
+    <div id="screenshot-modal" class="modal hidden">
+      <div class="modal-content">
+        <span class="modal-close" id="modal-close-btn">&times;</span>
+        <h3 id="modal-title">Opportunity Screenshot</h3>
+        <div class="modal-body">
+          <img id="modal-img" src="" alt="Post Screenshot">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../utils/export.js"></script>
+  <script src="../storage/opportunities.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
