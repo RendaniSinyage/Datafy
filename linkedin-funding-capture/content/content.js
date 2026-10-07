@@ -20,10 +20,7 @@
       }
     }
 
-    // Start DOM observation
     startObserver();
-
-    // Initial scan of page
     scheduleScan();
   }
 
@@ -79,7 +76,6 @@
       for (const postEl of posts) {
         if (postEl.dataset.lfcProcessed === 'true') continue;
 
-        // Mark processed immediately to prevent duplicate loops
         postEl.dataset.lfcProcessed = 'true';
 
         const postText = Extractor.extractPostText(postEl);
@@ -88,11 +84,17 @@
         const author = Extractor.extractAuthor(postEl);
         const authorProfileUrl = Extractor.extractAuthorProfile(postEl);
         const postUrl = Extractor.extractPostUrl(postEl);
+        const applicationUrl = Extractor.extractApplicationUrl(postText, postEl);
 
-        const dedupeKey = Dedupe.getPostIdentifier(postUrl, author, postText);
+        const candidateOpp = {
+          postUrl,
+          author,
+          postText,
+          applicationUrl
+        };
 
-        // Check deduplication
-        if (Dedupe.isAlreadyCaptured(postUrl, author, postText, capturedKeysSet)) {
+        // Check deduplication (including cross-user duplicates)
+        if (Dedupe.isAlreadyCaptured(candidateOpp, capturedKeysSet)) {
           injectBadge(postEl, 'saved', '✓ Saved as funding opportunity');
           continue;
         }
@@ -100,8 +102,7 @@
         // Check relevance
         const detection = Detector.detectOpportunity(postText, currentSettings.threshold);
         if (detection.isOpportunity) {
-          // Process & capture
-          await captureOpportunity(postEl, postText, author, authorProfileUrl, postUrl, dedupeKey, detection);
+          await captureOpportunity(postEl, postText, author, authorProfileUrl, postUrl, candidateOpp, detection);
         }
       }
     } catch (err) {
@@ -111,10 +112,9 @@
     }
   }
 
-  async function captureOpportunity(postEl, postText, author, authorProfileUrl, postUrl, dedupeKey, detection) {
+  async function captureOpportunity(postEl, postText, author, authorProfileUrl, postUrl, candidateOpp, detection) {
     const details = Extractor.extractOpportunityDetails(postText, author, authorProfileUrl, postUrl);
 
-    // Request screenshot from background service worker
     let screenshotUrl = '';
     try {
       const rect = postEl.getBoundingClientRect();
@@ -156,24 +156,21 @@
       eligibility: details.eligibility,
       geography: details.geography,
       industry: details.industry,
-      applicationUrl: details.applicationUrl,
+      applicationUrl: details.applicationUrl || candidateOpp.applicationUrl || '',
       notes: '',
       rawText: details.rawText,
       relevanceScore: detection.score,
       matches: detection.matches,
-      screenshot: screenshotUrl,
-      dedupeKey: dedupeKey
+      screenshot: screenshotUrl
     };
 
-    // Add key to local set
-    capturedKeysSet.add(dedupeKey);
+    const dedupeKeys = Dedupe.getAllDedupeKeys(opportunityRecord);
+    dedupeKeys.forEach(k => capturedKeysSet.add(k));
 
-    // Save to storage
     if (typeof StorageManager !== 'undefined') {
-      await StorageManager.saveOpportunity(opportunityRecord, dedupeKey);
+      await StorageManager.saveOpportunity(opportunityRecord, dedupeKeys);
     }
 
-    // Inject visible badge on post
     injectBadge(postEl, 'captured', `✓ Funding opportunity captured`, detection.score);
   }
 
@@ -200,7 +197,6 @@
       badge.appendChild(scoreSpan);
     }
 
-    // Try inserting badge at the top or after actor header
     const header = postEl.querySelector('.feed-shared-actor, .update-components-actor') || postEl.firstChild;
     if (header && header.parentNode) {
       header.parentNode.insertBefore(badge, header.nextSibling);
@@ -209,7 +205,6 @@
     }
   }
 
-  // Listen for storage changes from popup
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area === 'local') {
@@ -223,7 +218,6 @@
     });
   }
 
-  // Initialize
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

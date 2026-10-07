@@ -73,7 +73,7 @@
     });
   }
 
-  function saveOpportunity(opp, dedupeKey) {
+  function saveOpportunity(opp, dedupeKeysArray) {
     return new Promise((resolve) => {
       if (!hasChromeStorage()) {
         resolve(opp);
@@ -81,16 +81,18 @@
       }
 
       Promise.all([getOpportunities(), getCapturedKeys()]).then(([opps, keys]) => {
-        const existingIdx = opps.findIndex(o => o.id === opp.id || (dedupeKey && o.dedupeKey === dedupeKey));
+        const newKeys = Array.isArray(dedupeKeysArray) ? dedupeKeysArray : [dedupeKeysArray || opp.postUrl || opp.id];
+        const existingIdx = opps.findIndex(o => o.id === opp.id || (o.postUrl && o.postUrl === opp.postUrl));
+
         let updatedOpps;
         if (existingIdx >= 0) {
           updatedOpps = [...opps];
-          updatedOpps[existingIdx] = { ...updatedOpps[existingIdx], ...opp, dedupeKey };
+          updatedOpps[existingIdx] = { ...updatedOpps[existingIdx], ...opp, dedupeKeys: newKeys };
         } else {
-          updatedOpps = [{ ...opp, dedupeKey }, ...opps];
+          updatedOpps = [{ ...opp, dedupeKeys: newKeys }, ...opps];
         }
 
-        const updatedKeys = Array.from(new Set([...keys, dedupeKey || opp.postUrl || opp.id]));
+        const updatedKeys = Array.from(new Set([...keys, ...newKeys]));
 
         chrome.storage.local.set({
           [STORAGE_KEYS.OPPORTUNITIES]: updatedOpps,
@@ -118,9 +120,9 @@
 
         getCapturedKeys().then(keys => {
           let updatedKeys = keys;
-          if (oppToDelete) {
-            const keyToRemove = oppToDelete.dedupeKey || oppToDelete.postUrl;
-            updatedKeys = keys.filter(k => k !== keyToRemove);
+          if (oppToDelete && oppToDelete.dedupeKeys) {
+            const keysToRemove = new Set(oppToDelete.dedupeKeys);
+            updatedKeys = keys.filter(k => !keysToRemove.has(k));
           }
 
           chrome.storage.local.set({

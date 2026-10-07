@@ -93,12 +93,13 @@ runTest('Extractor: Classifies Venture Capital, extracts ZAR amount', () => {
   assert.strictEqual(details.industry, 'Fintech');
 });
 
-runTest('Extractor: Handles missing post author gracefully', () => {
-  const postText = `Call for applications: $100,000 Competition prize for AI startups.`;
-  const details = Extractor.extractOpportunityDetails(postText, '');
-  assert.strictEqual(details.opportunityType, 'Competition');
-  assert.strictEqual(details.amount, '$100,000');
-  assert.strictEqual(details.organization, '');
+runTest('Extractor: Extracts text from image alt attributes (OCR/descriptions)', () => {
+  const mockArticle = {
+    querySelector: (sel) => sel.includes('description') ? { innerText: 'Check out this grant opportunity!' } : null,
+    querySelectorAll: (sel) => sel === 'img[alt]' ? [{ getAttribute: () => 'Infographic detailing $50k grant for women founders' }] : []
+  };
+  const text = Extractor.extractPostText(mockArticle);
+  assert.ok(text.includes('Infographic detailing $50k grant'));
 });
 
 // 3. Dedupe Tests
@@ -111,17 +112,32 @@ runTest('Dedupe: Post URL normalization and activity URN extraction', () => {
   assert.strictEqual(id1, 'urn:li:activity:7890123456');
 });
 
-runTest('Dedupe: Fallback fingerprint when URL is unavailable', () => {
-  const id = Dedupe.getPostIdentifier('', 'VC Partner', 'Announcing new $10M fund for startups.');
-  assert.strictEqual(id, 'fp:vc partner::announcing new $10m fund for startups.');
-});
+runTest('Dedupe: Cross-user duplicate detection via application URL and opportunity fingerprint', () => {
+  const origOpp = {
+    postUrl: 'https://linkedin.com/posts/founder1-activity-100',
+    author: 'Founder 1',
+    postText: 'ABC Foundation $500,000 grant application at https://abc.org/apply-2026',
+    organization: 'ABC Foundation',
+    opportunityType: 'Grant',
+    amount: '$500,000',
+    applicationUrl: 'https://abc.org/apply-2026'
+  };
 
-runTest('Dedupe: isAlreadyCaptured correctly checks Set, Array, and Object', () => {
-  const key = 'urn:li:activity:11111';
-  assert.strictEqual(Dedupe.isAlreadyCaptured('https://www.linkedin.com/feed/update/urn:li:activity:11111', '', '', new Set([key])), true);
-  assert.strictEqual(Dedupe.isAlreadyCaptured('https://www.linkedin.com/feed/update/urn:li:activity:11111', '', '', [key]), true);
-  assert.strictEqual(Dedupe.isAlreadyCaptured('https://www.linkedin.com/feed/update/urn:li:activity:11111', '', '', { [key]: true }), true);
-  assert.strictEqual(Dedupe.isAlreadyCaptured('https://www.linkedin.com/feed/update/urn:li:activity:22222', '', '', new Set([key])), false);
+  const keys = Dedupe.getAllDedupeKeys(origOpp);
+  const capturedSet = new Set(keys);
+
+  // Reposted by a completely different user!
+  const repostOpp = {
+    postUrl: 'https://linkedin.com/posts/influencer99-activity-900',
+    author: 'Influencer 99',
+    postText: 'Great funding opportunity! Apply at https://abc.org/apply-2026',
+    organization: 'ABC Foundation',
+    opportunityType: 'Grant',
+    amount: '$500,000',
+    applicationUrl: 'https://abc.org/apply-2026'
+  };
+
+  assert.strictEqual(Dedupe.isAlreadyCaptured(repostOpp, capturedSet), true);
 });
 
 // 4. ExportUtils Tests

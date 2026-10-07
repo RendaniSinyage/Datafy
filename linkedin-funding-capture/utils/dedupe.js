@@ -15,7 +15,11 @@
       if (match) {
         return 'urn:li:activity:' + match[1];
       }
-      return parsed.origin + parsed.pathname.replace(/\/$/, '');
+      if (parsed.hostname.includes('linkedin.com')) {
+        return parsed.origin + parsed.pathname.replace(/\/$/, '');
+      }
+      // Return normalized external URL
+      return parsed.origin + parsed.pathname.replace(/\/$/, '') + parsed.search;
     } catch (e) {
       return url.trim().toLowerCase();
     }
@@ -27,6 +31,15 @@
     return 'fp:' + cleanAuthor + '::' + cleanText;
   }
 
+  function generateOppFingerprint(organization, opportunityType, amount) {
+    const cleanOrg = (organization || '').trim().toLowerCase().replace(/\s+/g, '');
+    const cleanType = (opportunityType || 'other').trim().toLowerCase();
+    const cleanAmt = (amount || '').trim().toLowerCase().replace(/\s+/g, '');
+
+    if (!cleanOrg && !cleanAmt) return '';
+    return 'oppfp:' + cleanOrg + '::' + cleanType + '::' + cleanAmt;
+  }
+
   function getPostIdentifier(postUrl, author, postText) {
     const normUrl = normalizeUrl(postUrl);
     if (normUrl && normUrl !== 'https://www.linkedin.com' && normUrl !== 'https://www.linkedin.com/feed') {
@@ -35,21 +48,66 @@
     return generateFingerprint(author, postText);
   }
 
-  function isAlreadyCaptured(postUrl, author, postText, capturedKeys) {
-    if (!capturedKeys) return false;
-    const key = getPostIdentifier(postUrl, author, postText);
-    if (capturedKeys instanceof Set) {
-      return capturedKeys.has(key);
-    } else if (Array.isArray(capturedKeys)) {
-      return capturedKeys.includes(key);
-    } else if (typeof capturedKeys === 'object') {
-      return Boolean(capturedKeys[key]);
+  function getAllDedupeKeys(opp) {
+    if (!opp || typeof opp !== 'object') return [];
+
+    const keys = new Set();
+
+    // 1. Post URL / Activity URN
+    const postKey = getPostIdentifier(opp.postUrl || '', opp.author || '', opp.postText || opp.rawText || '');
+    if (postKey) keys.add(postKey);
+
+    // 2. Author + text fingerprint
+    if (opp.author || opp.postText) {
+      const authorFp = generateFingerprint(opp.author, opp.postText || opp.rawText);
+      if (authorFp) keys.add(authorFp);
     }
+
+    // 3. Application URL (Cross-user duplicate detector)
+    if (opp.applicationUrl && opp.applicationUrl.length > 8) {
+      const appNorm = normalizeUrl(opp.applicationUrl);
+      if (appNorm && !appNorm.includes('linkedin.com')) {
+        keys.add('appurl:' + appNorm.toLowerCase());
+      }
+    }
+
+    // 4. Structured Organization + Type + Amount fingerprint
+    const oppFp = generateOppFingerprint(opp.organization, opp.opportunityType, opp.amount);
+    if (oppFp) {
+      keys.add(oppFp);
+    }
+
+    return Array.from(keys);
+  }
+
+  function isAlreadyCaptured(oppRecord, capturedKeys) {
+    if (!capturedKeys || !oppRecord) return false;
+
+    let candidateKeys = [];
+    if (typeof oppRecord === 'string') {
+      candidateKeys = [oppRecord];
+    } else {
+      candidateKeys = getAllDedupeKeys(oppRecord);
+    }
+
+    for (const key of candidateKeys) {
+      if (!key) continue;
+      if (capturedKeys instanceof Set) {
+        if (capturedKeys.has(key)) return true;
+      } else if (Array.isArray(capturedKeys)) {
+        if (capturedKeys.includes(key)) return true;
+      } else if (typeof capturedKeys === 'object') {
+        if (Boolean(capturedKeys[key])) return true;
+      }
+    }
+
     return false;
   }
 
   exports.normalizeUrl = normalizeUrl;
   exports.generateFingerprint = generateFingerprint;
+  exports.generateOppFingerprint = generateOppFingerprint;
   exports.getPostIdentifier = getPostIdentifier;
+  exports.getAllDedupeKeys = getAllDedupeKeys;
   exports.isAlreadyCaptured = isAlreadyCaptured;
 }));

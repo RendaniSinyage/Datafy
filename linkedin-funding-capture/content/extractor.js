@@ -22,6 +22,13 @@
       '.update-components-text',
       'div.feed-shared-update-v2__text'
     ],
+    seeMoreButtons: [
+      'button.feed-shared-inline-show-more-text__see-more-less-toggle',
+      'button[aria-label*="see more" i]',
+      'button[aria-label*="show more" i]',
+      'button.see-more',
+      '.feed-shared-inline-show-more-text button'
+    ],
     author: [
       '.feed-shared-actor__name',
       '.update-components-actor__name',
@@ -45,16 +52,69 @@
     ]
   };
 
+  function expandCollapsedPost(article) {
+    if (!article || typeof article.querySelectorAll !== 'function') return;
+
+    try {
+      for (const selector of SELECTORS.seeMoreButtons) {
+        const btns = article.querySelectorAll(selector);
+        btns.forEach(btn => {
+          if (btn && typeof btn.click === 'function' && btn.offsetWidth > 0) {
+            btn.click();
+          }
+        });
+      }
+    } catch (e) {
+      // Ignore click errors in restricted DOMs
+    }
+  }
+
   function extractPostText(article) {
     if (!article || typeof article.querySelector !== 'function') return '';
 
+    // Auto-expand "...see more" if present
+    expandCollapsedPost(article);
+
+    let mainText = '';
     for (const selector of SELECTORS.text) {
       const el = article.querySelector(selector);
       if (el && el.innerText && el.innerText.trim().length > 0) {
-        return el.innerText.trim();
+        mainText = el.innerText.trim();
+        break;
       }
     }
-    return (article.innerText || article.textContent || '').trim();
+
+    if (!mainText) {
+      mainText = (article.innerText || article.textContent || '').trim();
+    }
+
+    // Extract text from image alt attributes (LinkedIn image descriptions / OCR)
+    const imageAltTexts = [];
+    try {
+      const imgs = article.querySelectorAll('img[alt]');
+      imgs.forEach(img => {
+        const alt = (img.getAttribute('alt') || '').trim();
+        if (alt && alt.length > 10) {
+          const lower = alt.toLowerCase();
+          const isGeneric = lower.includes('profile photo') ||
+                            lower.includes('profile picture') ||
+                            lower.includes('no photo description available') ||
+                            lower.includes('image icon') ||
+                            lower.includes('company logo');
+          if (!isGeneric && !mainText.includes(alt)) {
+            imageAltTexts.push(alt);
+          }
+        }
+      });
+    } catch (e) {
+      // Ignore DOM selector errors
+    }
+
+    if (imageAltTexts.length > 0) {
+      mainText += '\n\n[Image Description: ' + imageAltTexts.join(' | ') + ']';
+    }
+
+    return mainText.trim();
   }
 
   function extractAuthor(article) {
@@ -234,7 +294,7 @@
   function extractTitle(text) {
     if (!text || typeof text !== 'string') return '';
 
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('[Image Description:'));
     if (lines.length > 0) {
       let firstLine = lines[0];
       if (firstLine.length > 90) {
@@ -324,6 +384,7 @@
   }
 
   exports.SELECTORS = SELECTORS;
+  exports.expandCollapsedPost = expandCollapsedPost;
   exports.extractPostText = extractPostText;
   exports.extractAuthor = extractAuthor;
   exports.extractAuthorProfile = extractAuthorProfile;
