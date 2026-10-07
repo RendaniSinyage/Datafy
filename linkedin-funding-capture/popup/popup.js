@@ -87,7 +87,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getFilteredOpportunities() {
     let result = [...allOpportunities];
 
-    // Category filter
     if (currentFilterType !== 'ALL') {
       result = result.filter(item => {
         const type = item.opportunityType || 'Other';
@@ -98,7 +97,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    // Search query filter
     if (currentSearchQuery) {
       result = result.filter(item => {
         const text = [
@@ -109,13 +107,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           item.notes,
           item.opportunityType,
           item.geography,
-          item.industry
+          item.industry,
+          item.applicationUrl
         ].map(s => (s || '').toLowerCase()).join(' ');
         return text.includes(currentSearchQuery);
       });
     }
 
-    // Sort
     result.sort((a, b) => {
       if (currentSort === 'date-desc') {
         return new Date(b.capturedAt) - new Date(a.capturedAt);
@@ -181,22 +179,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
     }
 
+    // Direct application URL priority:
+    let linksHtml = '';
+    if (opp.applicationUrl) {
+      linksHtml += `<a href="${opp.applicationUrl}" target="_blank" class="action-link" style="font-weight: 700;">[Apply / Visit Link 🔗]</a> `;
+    }
+    if (opp.postUrl) {
+      linksHtml += `<a href="${opp.postUrl}" target="_blank" class="action-link" style="color: #666;">[LinkedIn Post]</a>`;
+    }
+
     card.innerHTML = `
       <div class="opp-card-header">
-        <a href="${opp.authorProfileUrl || opp.postUrl || '#'}" target="_blank" class="opp-author">${escapeHtml(authorDisplay)}</a>
+        <a href="${opp.applicationUrl || opp.authorProfileUrl || opp.postUrl || '#'}" target="_blank" class="opp-author">${escapeHtml(authorDisplay)}</a>
         <span class="opp-type-badge ${typeClass}">${escapeHtml(opp.opportunityType || 'Other')}</span>
       </div>
       <div class="opp-title">${escapeHtml(opp.title || 'Funding Opportunity')}</div>
       ${metaHtml}
       <div class="opp-text-snippet">${escapeHtml(opp.postText || '')}</div>
       <div class="opp-card-actions">
-        ${opp.postUrl ? `<a href="${opp.postUrl}" target="_blank" class="action-link">[Open LinkedIn]</a>` : ''}
+        ${linksHtml}
         ${opp.screenshot ? `<button class="action-btn-sm view-screenshot-btn">[View screenshot]</button>` : ''}
         <button class="action-btn-sm delete-btn" style="margin-left:auto; color: #d93025;">Delete</button>
       </div>
     `;
 
-    // View screenshot event
     const viewScreenshotBtn = card.querySelector('.view-screenshot-btn');
     if (viewScreenshotBtn) {
       viewScreenshotBtn.addEventListener('click', () => {
@@ -204,7 +210,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    // Delete event
     const deleteBtn = card.querySelector('.delete-btn');
     deleteBtn.addEventListener('click', async () => {
       if (confirm('Delete this saved opportunity?')) {
