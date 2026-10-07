@@ -52,6 +52,36 @@
     return JSON.stringify(opportunities || [], null, 2);
   }
 
+  function isOpenOpportunity(opp) {
+    if (!opp || typeof opp !== 'object') return false;
+    const deadline = (opp.deadline || '').trim();
+
+    if (!deadline || /ongoing|rolling|open|tbd|unspecified/i.test(deadline)) {
+      return true;
+    }
+
+    try {
+      const parsedDate = new Date(deadline);
+      if (!isNaN(parsedDate.getTime())) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return parsedDate >= today;
+      }
+    } catch (e) {
+      // Fallback: check year
+    }
+
+    // Check if deadline mentions a future year (e.g. 2026, 2027)
+    const currentYear = new Date().getFullYear();
+    const yearMatch = deadline.match(/\b(20\d{2})\b/);
+    if (yearMatch) {
+      const year = parseInt(yearMatch[1], 10);
+      return year >= currentYear;
+    }
+
+    return true; // Default to open if parsing uncertain
+  }
+
   function generateRokctaiFilename(opp) {
     const titlePart = (opp.title || 'Grant Opportunity')
       .replace(/[^a-zA-Z0-9\s]/g, '')
@@ -59,7 +89,8 @@
       .replace(/\s+/g, '_')
       .substring(0, 60);
 
-    const datePrefix = opp.deadline && opp.deadline.toLowerCase() !== 'ongoing' ? 'Call' : 'Ongoing';
+    const deadline = (opp.deadline || '').toLowerCase();
+    const datePrefix = deadline && deadline !== 'ongoing' && deadline !== 'rolling' ? 'Call' : 'Ongoing';
     return `${datePrefix}_${titlePart}.md`;
   }
 
@@ -101,6 +132,24 @@ ${description}
 `;
   }
 
+  function generateGitHubPRBatch(opportunities) {
+    const list = Array.isArray(opportunities) ? opportunities : [];
+    const openOpps = list.filter(isOpenOpportunity);
+
+    const files = openOpps.map(opp => ({
+      filename: generateRokctaiFilename(opp),
+      content: exportToRokctaiMarkdown(opp),
+      opportunity: opp
+    }));
+
+    return {
+      openCount: openOpps.length,
+      totalCount: list.length,
+      files,
+      uploadUrl: 'https://github.com/rokctai/opportunities/upload/main/02_grants'
+    };
+  }
+
   function downloadFile(content, filename, contentType) {
     if (typeof document === 'undefined') return content;
     const blob = new Blob([content], { type: contentType });
@@ -118,7 +167,9 @@ ${description}
   exports.escapeCsvCell = escapeCsvCell;
   exports.exportToCSV = exportToCSV;
   exports.exportToJSON = exportToJSON;
+  exports.isOpenOpportunity = isOpenOpportunity;
   exports.generateRokctaiFilename = generateRokctaiFilename;
   exports.exportToRokctaiMarkdown = exportToRokctaiMarkdown;
+  exports.generateGitHubPRBatch = generateGitHubPRBatch;
   exports.downloadFile = downloadFile;
 }));

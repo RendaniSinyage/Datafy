@@ -26,7 +26,7 @@
 }
 
 body {
-  width: 440px;
+  width: 460px;
   min-height: 520px;
   max-height: 600px;
   font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
@@ -137,17 +137,27 @@ body {
 
 .export-buttons {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .btn {
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 6px 10px;
+  font-size: 11px;
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
   border: 1px solid transparent;
   transition: background-color 0.2s;
+}
+
+.btn-primary {
+  background-color: #137333;
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: #0d5225;
 }
 
 .btn-secondary {

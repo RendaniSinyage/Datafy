@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const exportJsonBtn = document.getElementById('export-json-btn');
   const exportCsvBtn = document.getElementById('export-csv-btn');
   const exportMdBtn = document.getElementById('export-md-btn');
+  const prRokctaiBtn = document.getElementById('pr-rokctai-btn');
   const clearAllBtn = document.getElementById('clear-all-btn');
 
   // Settings DOM
@@ -262,6 +263,26 @@ document.addEventListener('DOMContentLoaded', async () => {
           ExportUtils.downloadFile(mdStr, filename, 'text/markdown');
         }, idx * 150);
       });
+    });
+  }
+
+  if (prRokctaiBtn) {
+    prRokctaiBtn.addEventListener('click', () => {
+      const batch = ExportUtils.generateGitHubPRBatch(allOpportunities);
+      if (batch.openCount === 0) {
+        alert('No active/open opportunities found to submit.');
+        return;
+      }
+
+      batch.files.forEach((fileObj, idx) => {
+        setTimeout(() => {
+          ExportUtils.downloadFile(fileObj.content, fileObj.filename, 'text/markdown');
+        }, idx * 150);
+      });
+
+      window.open(batch.uploadUrl, '_blank');
+
+      alert(`Exported ${batch.openCount} open grant Markdown card(s)!\n\n1. Drag and drop the downloaded .md file(s) into the opened GitHub upload window.\n2. Click 'Propose changes'.\n3. Click 'Create pull request' to submit your PR to rokctai/opportunities!`);
     });
   }
 
