@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const listContainer = document.getElementById('opportunities-list');
   const exportJsonBtn = document.getElementById('export-json-btn');
   const exportCsvBtn = document.getElementById('export-csv-btn');
+  const exportMdBtn = document.getElementById('export-md-btn');
   const clearAllBtn = document.getElementById('clear-all-btn');
 
   // Settings DOM
@@ -179,7 +180,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
     }
 
-    // Direct application URL priority:
     let linksHtml = '';
     if (opp.applicationUrl) {
       linksHtml += `<a href="${opp.applicationUrl}" target="_blank" class="action-link" style="font-weight: 700;">[Apply / Visit Link 🔗]</a> `;
@@ -247,6 +247,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const csvStr = ExportUtils.exportToCSV(allOpportunities);
     ExportUtils.downloadFile(csvStr, 'linkedin_funding_opportunities.csv', 'text/csv');
   });
+
+  if (exportMdBtn) {
+    exportMdBtn.addEventListener('click', () => {
+      const filtered = getFilteredOpportunities();
+      if (filtered.length === 0) {
+        alert('No opportunities to export.');
+        return;
+      }
+      filtered.forEach((opp, idx) => {
+        setTimeout(() => {
+          const mdStr = ExportUtils.exportToRokctaiMarkdown(opp);
+          const filename = ExportUtils.generateRokctaiFilename(opp);
+          ExportUtils.downloadFile(mdStr, filename, 'text/markdown');
+        }, idx * 150);
+      });
+    });
+  }
 
   clearAllBtn.addEventListener('click', async () => {
     if (confirm('Are you sure you want to clear ALL saved opportunities? This action cannot be undone.')) {

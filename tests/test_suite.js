@@ -126,7 +126,6 @@ runTest('Dedupe: Cross-user duplicate detection via application URL and opportun
   const keys = Dedupe.getAllDedupeKeys(origOpp);
   const capturedSet = new Set(keys);
 
-  // Reposted by a completely different user!
   const repostOpp = {
     postUrl: 'https://linkedin.com/posts/influencer99-activity-900',
     author: 'Influencer 99',
@@ -173,6 +172,29 @@ runTest('ExportUtils: Export to CSV correctly formats headers and escapes specia
   assert.ok(csv.includes('"capturedAt","author"'));
   assert.ok(csv.includes('"Author ""Special"" Name"'));
   assert.ok(csv.includes('"Title with \n newline and ""quotes"""'));
+});
+
+runTest('ExportUtils: Export to Markdown generates valid rokctai/opportunities template', () => {
+  const opp = {
+    title: 'African Education Innovation Grant',
+    organization: 'ABC Foundation',
+    amount: '$500,000',
+    currency: 'USD',
+    deadline: '30 Nov 2026',
+    eligibility: 'African edtech startups',
+    industry: 'Education',
+    postUrl: 'https://linkedin.com/posts/abc',
+    applicationUrl: 'https://abc.org/apply',
+    rawText: 'Grant details...'
+  };
+
+  const md = ExportUtils.exportToRokctaiMarkdown(opp);
+  const filename = ExportUtils.generateRokctaiFilename(opp);
+
+  assert.strictEqual(filename, 'Call_African_Education_Innovation_Grant.md');
+  assert.ok(md.includes('# Grant Opportunity: African Education Innovation Grant'));
+  assert.ok(md.includes('- **Organization**: ABC Foundation'));
+  assert.ok(md.includes('- **Applying Link**: https://abc.org/apply'));
 });
 
 // 5. StorageManager Interface Tests

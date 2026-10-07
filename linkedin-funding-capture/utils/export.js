@@ -52,6 +52,55 @@
     return JSON.stringify(opportunities || [], null, 2);
   }
 
+  function generateRokctaiFilename(opp) {
+    const titlePart = (opp.title || 'Grant Opportunity')
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .trim()
+      .replace(/\s+/g, '_')
+      .substring(0, 60);
+
+    const datePrefix = opp.deadline && opp.deadline.toLowerCase() !== 'ongoing' ? 'Call' : 'Ongoing';
+    return `${datePrefix}_${titlePart}.md`;
+  }
+
+  function exportToRokctaiMarkdown(opp) {
+    if (!opp || typeof opp !== 'object') return '';
+
+    const today = new Date().toISOString().split('T')[0];
+    const title = opp.title || 'Funding Opportunity';
+    const org = opp.organization || opp.author || 'Unspecified';
+    const deadline = opp.deadline || 'Ongoing';
+    const amount = opp.amount ? `${opp.amount} ${opp.currency || ''}`.trim() : 'Unspecified';
+    const focusArea = opp.industry || opp.opportunityType || 'General';
+    const eligibility = opp.eligibility || 'Open to eligible applicants and startups';
+    const applyLink = opp.applicationUrl || opp.postUrl || '';
+    const sourceLink = opp.postUrl || opp.applicationUrl || '';
+    const description = opp.rawText || opp.postText || '';
+
+    return `# Grant Opportunity: ${title}
+
+## Quick Stats
+- **Organization**: ${org}
+- **Deadline**: ${deadline}
+- **Funding Amount**: ${amount}
+- **Focus Area**: ${focusArea}
+
+## Eligibility
+- ${eligibility}
+
+## Description
+${description}
+
+## How to Apply
+- **Applying Link**: ${applyLink}
+- **Source**: ${sourceLink}
+
+## Audit & Status
+- **Verification Status**: UNVERIFIED
+- **Last Verified**: ${today}
+`;
+  }
+
   function downloadFile(content, filename, contentType) {
     if (typeof document === 'undefined') return content;
     const blob = new Blob([content], { type: contentType });
@@ -69,5 +118,7 @@
   exports.escapeCsvCell = escapeCsvCell;
   exports.exportToCSV = exportToCSV;
   exports.exportToJSON = exportToJSON;
+  exports.generateRokctaiFilename = generateRokctaiFilename;
+  exports.exportToRokctaiMarkdown = exportToRokctaiMarkdown;
   exports.downloadFile = downloadFile;
 }));
