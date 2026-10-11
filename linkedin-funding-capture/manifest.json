@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "LinkedIn Funding Opportunity Capture",
+  "version": "1.0.0",
+  "description": "Automatically detects and captures funding opportunities on LinkedIn as you browse.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.linkedin.com/*",
+    "https://*.linkedin.com/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "LinkedIn Funding Capture"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/*",
+        "https://*.linkedin.com/*"
+      ],
+      "js": [
+        "utils/dedupe.js",
+        "content/detector.js",
+        "content/extractor.js",
+        "storage/opportunities.js",
+        "content/content.js"
+      ],
+      "css": [
+        "content/styles.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
